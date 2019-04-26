@@ -84,6 +84,22 @@ void deleteFile(fs::FS &fs, const char *path)
     }
 }
 
+
+void writeFile(fs::FS &fs, const char * path, const char * message){
+    Serial.printf("Writing file: %s\n", path);
+
+    File file = fs.open(path, FILE_WRITE);
+    if(!file){
+        Serial.println("Failed to open file for writing");
+        return;
+    }
+    if(file.print(message)){
+        Serial.println("File written");
+    } else {
+        Serial.println("Write failed");
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -134,6 +150,8 @@ void setup()
     Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
     Serial.println(" ");
     Serial.println(" ");
+
+    writeFile(SD_MMC, "/hello.txt", "Hello ");
 
     rtc = new CMMC_RTC();
     rtc->setup();
@@ -190,7 +208,7 @@ void setup()
 
     s_Date = rtc->getDateString();
     s_Time = rtc->getTimeString();
-    id++;
+    id = 0;
     value = random(0, 100);
     s_Name = "ID001";
 
@@ -219,10 +237,11 @@ void setup()
     }
     else
     {
-        Serial.print("INSER Done...");
+        Serial.println("INSER Done...");
     }
 
     sprintf(buffer, ""); // clear buffer
+    sqlite3_close(db1);
 
     // char buffer[100];
     // sprintf(buffer, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
@@ -264,6 +283,9 @@ void saveDB()
 {
     int rc;
     char buffer[200];
+    id++;
+    value = random(0, 100);
+    s_Name = "ID001";
 
     sprintf(buffer, "INSERT INTO dataman (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
     rc = db_exec(db1, buffer);
@@ -272,6 +294,7 @@ void saveDB()
         Serial.print("INSER Failed...");
         Serial.println(" ");
         Serial.println(" ");
+        rc = db_exec(db1, buffer);
     }
     else
     {
@@ -280,15 +303,15 @@ void saveDB()
 
     sprintf(buffer, ""); // clear buffer
 }
+
 void loop()
 {
-    delay(1);
     rtc->loop();
     uint32_t curTime = millis();
     if (curTime - pevTime >= 5000)
     {
         pevTime = curTime;
         saveDB();
-        Serial.println("save db done...");
     }
+    delay(1);
 }
