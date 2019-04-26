@@ -88,35 +88,54 @@ void deleteFile(fs::FS &fs, const char *path)
 void setup()
 {
     Serial.begin(115200);
-    char *zErrMsg = 0;
+    // char *zErrMsg = 0;
 
     SPI.begin();
     SD_MMC.begin("/sdcard", true);
     delay(50);
 
-    // uint8_t cardType = SD_MMC.cardType();
-
-    // if(cardType == CARD_NONE){
-    //     Serial.println("No SD_MMC card attached");
-    //     return;
-    // }
-
-    // Serial.print("SD_MMC Card Type: ");
-    // if(cardType == CARD_MMC){
-    //     Serial.println("MMC");
-    // } else if(cardType == CARD_SD){
-    //     Serial.println("SDSC");
-    // } else if(cardType == CARD_SDHC){
-    //     Serial.println("SDHC");
-    // } else {
-    //     Serial.println("UNKNOWN");
-    // }
-
-    // uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
-    // Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE)
+    {
+        Serial.println("No SD_MMC card attached");
+    }
+    else
+    {
+        Serial.print("SD_MMC Card Type: ");
+        if (cardType == CARD_MMC)
+        {
+            Serial.println("MMC");
+        }
+        else if (cardType == CARD_SD)
+        {
+            Serial.println("SDSC");
+        }
+        else if (cardType == CARD_SDHC)
+        {
+            Serial.println("SDHC");
+        }
+        else
+        {
+            Serial.println("UNKNOWN");
+        }
+    }
+    uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
+    Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
 
     sqlite3_initialize();
     delay(10);
+
+    rtc = new CMMC_RTC();
+    rtc->setup();
+    rtc->loop();
+
+    Serial.print("get dateTime: ");
+    Serial.println(rtc->getDateTimeString());
+    Serial.print("get gettDatestamp: ");
+    Serial.println(rtc->getDateString());
+    Serial.print("get gettTimestamp: ");
+    Serial.println(rtc->getTimeString());
+
 
     // deleteFile(SD_MMC, "/ina219.db");
 
@@ -138,17 +157,6 @@ void setup()
     // sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(),rtc->getTimeString().c_str(), id, value, s_Name.c_str());
     // Serial.println(buffer);
 
-    rtc = new CMMC_RTC();
-    rtc->setup();
-    rtc->loop();
-
-    Serial.print("get dateTime: ");
-    Serial.println(rtc->getDateTimeString());
-    Serial.print("get gettDatestamp: ");
-    Serial.println(rtc->getDateString());
-    Serial.print("get gettTimestamp: ");
-    Serial.println(rtc->getTimeString());
-
     id++;
     value = random(0, 100);
     s_Name = "ID001";
@@ -158,15 +166,20 @@ void setup()
     Serial.println(buffer);
 
     rc = db_exec(db1, buffer);
+    Serial.print("SQLITE status: ");
+    Serial.print(rc);
+    delay(1000);
+
     if (rc != SQLITE_OK)
     {
+        Serial.print("Save Failed...");
         sqlite3_close(db1);
-        return;
     }
-
-    // saveDB();
-
-    // sqlite3_close(db1);
+    else
+    {
+        Serial.print("Save OK...");
+    }
+    sqlite3_close(db1);
 }
 
 uint32_t pevTime = 0;
