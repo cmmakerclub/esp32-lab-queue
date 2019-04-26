@@ -84,18 +84,22 @@ void deleteFile(fs::FS &fs, const char *path)
     }
 }
 
-
-void writeFile(fs::FS &fs, const char * path, const char * message){
+void writeFile(fs::FS &fs, const char *path, const char *message)
+{
     Serial.printf("Writing file: %s\n", path);
 
     File file = fs.open(path, FILE_WRITE);
-    if(!file){
+    if (!file)
+    {
         Serial.println("Failed to open file for writing");
         return;
     }
-    if(file.print(message)){
+    if (file.print(message))
+    {
         Serial.println("File written");
-    } else {
+    }
+    else
+    {
         Serial.println("Write failed");
     }
 }
@@ -169,15 +173,15 @@ void setup()
         return;
     }
 
-    rc = db_exec(db1, "CREATE TABLE dataman (date TEXT, time TEXT, id INTEGER, value INTEGER, IDname content);");
-    if (rc != SQLITE_OK)
-    {
-        Serial.print("CREATE TABLE Failed...");
-        Serial.println(" ");
-        Serial.println(" ");
-        // sqlite3_close(db1);
-        // return;
-    }
+    // rc = db_exec(db1, "CREATE TABLE dataman (date TEXT, time TEXT, id INTEGER, value INTEGER, IDname content);");
+    // if (rc != SQLITE_OK)
+    // {
+    //     Serial.print("CREATE TABLE Failed...");
+    //     Serial.println(" ");
+    //     Serial.println(" ");
+    //     // sqlite3_close(db1);
+    //     // return;
+    // }
 
     // rc = db_exec(db1, "INSERT INTO dataman VALUES ('26/04/19', '15.44', 1, 100 , 'superman');");
     // if (rc != SQLITE_OK)
@@ -232,8 +236,6 @@ void setup()
         Serial.print("INSER Failed...");
         Serial.println(" ");
         Serial.println(" ");
-        // sqlite3_close(db1);
-        // return;
     }
     else
     {
@@ -241,7 +243,7 @@ void setup()
     }
 
     sprintf(buffer, ""); // clear buffer
-    sqlite3_close(db1);
+    // sqlite3_close(db1);
 
     // char buffer[100];
     // sprintf(buffer, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
@@ -287,21 +289,29 @@ void saveDB()
     value = random(0, 100);
     s_Name = "ID001";
 
-    sprintf(buffer, "INSERT INTO dataman (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    rc = db_exec(db1, buffer);
-    if (rc != SQLITE_OK)
+    if (openDb("/sdcard/superman.db", &db1))
     {
-        Serial.print("INSER Failed...");
-        Serial.println(" ");
-        Serial.println(" ");
-        rc = db_exec(db1, buffer);
+        Serial.println("openDB Failed...");
     }
     else
     {
-        Serial.print("INSER Done...");
+        Serial.println("openDB Done...");
     }
 
-    sprintf(buffer, ""); // clear buffer
+    // rc = db_exec(db1, "INSERT INTO dataman VALUES ('26/04/19', '15.44', 2, 50 , 'superman');");
+    sprintf(buffer, "INSERT INTO dataman VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
+    rc = db_exec(db1, buffer);
+    if (rc != SQLITE_OK)
+    {
+        Serial.println("INSER Failed...");
+    }
+    else
+    {
+        Serial.println("INSER Done...");
+    }
+
+    sprintf(buffer, " "); // clear buffer
+    // sqlite3_close(db1);
 }
 
 void loop()
