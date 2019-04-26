@@ -92,7 +92,7 @@ void CMMC_RTC::loop() {
       Serial.println("RTC FAILED.");
       return;
     }
-    if (!_rtc_locked && (millis() - prev >= 500)) {
+    if (!_rtc_locked && (millis() - prev >= 0)) {
       DateTime now = rtc->now();
       // Serial.println(now.unixtime());
       if (now.year() > 2000 && now.year() <= 2021) { // work around

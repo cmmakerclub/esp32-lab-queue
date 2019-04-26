@@ -43,6 +43,7 @@ int openDb(const char *filename, sqlite3 **db)
     if (rc)
     {
         Serial.printf("Can't open database: %s\n", sqlite3_errmsg(*db));
+        ESP.deepSleep(1e6);
         return rc;
     }
     else
@@ -86,60 +87,74 @@ void deleteFile(fs::FS &fs, const char *path)
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     char *zErrMsg = 0;
-
-    rtc = new CMMC_RTC();
-    rtc->setup();
 
     SPI.begin();
     SD_MMC.begin("/sdcard", true);
+    delay(50);
+
+    // uint8_t cardType = SD_MMC.cardType();
+
+    // if(cardType == CARD_NONE){
+    //     Serial.println("No SD_MMC card attached");
+    //     return;
+    // }
+
+    // Serial.print("SD_MMC Card Type: ");
+    // if(cardType == CARD_MMC){
+    //     Serial.println("MMC");
+    // } else if(cardType == CARD_SD){
+    //     Serial.println("SDSC");
+    // } else if(cardType == CARD_SDHC){
+    //     Serial.println("SDHC");
+    // } else {
+    //     Serial.println("UNKNOWN");
+    // }
+
+    // uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
+    // Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
 
     sqlite3_initialize();
+    delay(10);
 
-    deleteFile(SD_MMC, "/ina219.db");
+    // deleteFile(SD_MMC, "/ina219.db");
 
     // Open database 1
     if (openDb("/sdcard/ina219.db", &db1))
         return;
 
-    rc = db_exec(db1, "CREATE TABLE datalog (date TEXT, time TEXT, id INTEGER, value INTEGER, IDname content);");
-    if (rc != SQLITE_OK)
-    {
-        sqlite3_close(db1);
-        return;
-    }
+    // rc = db_exec(db1, "CREATE TABLE datalog (date TEXT, time TEXT, id INTEGER, value INTEGER, IDname content);");
+    // if (rc != SQLITE_OK)
+    // {
+    //     // sqlite3_close(db1);
+    //     // return;
+    // }
 
     // const char *data = "INSERT INTO test1 VALUES (1, 'Hello, World from test1');";
     // rc = db_exec(db1, data);
     // rc = db_exec(db1, "INSERT INTO datalog VALUES (" +s_Date.c_str+ "," +s_Time.c_str+ "," +String(id)+ "," +String(value)+ ", 'superman');");
-    // rc = db_exec(db1, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('25/04/2019', 20.14, 1, 50, 'ID001');");
-    // if (rc != SQLITE_OK)
-    // {
-    //     sqlite3_close(db1);
-    //     return;
-    // }
+    // char buffer[100];
+    // sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(),rtc->getTimeString().c_str(), id, value, s_Name.c_str());
+    // Serial.println(buffer);
 
-    saveDB();
+    rtc = new CMMC_RTC();
+    rtc->setup();
+    rtc->loop();
 
-    sqlite3_close(db1);
-}
+    Serial.print("get dateTime: ");
+    Serial.println(rtc->getDateTimeString());
+    Serial.print("get gettDatestamp: ");
+    Serial.println(rtc->getDateString());
+    Serial.print("get gettTimestamp: ");
+    Serial.println(rtc->getTimeString());
 
-void saveDB()
-{
-    Serial.print("save db....");
-    // Open database 1
-    if (openDb("/sdcard/ina219.db", &db1))
-        return;
-
-    s_Date = "25/04/2019";
-    s_Time = "20.14";
     id++;
     value = random(0, 100);
     s_Name = "ID001";
 
     char buffer[100];
-    sprintf(buffer, "INSERT INTO datalog VALUES (%s, %s, %d, %d, %s);", s_Date.c_str(), s_Time.c_str(), id, value, s_Name.c_str());
+    sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
     Serial.println(buffer);
 
     rc = db_exec(db1, buffer);
@@ -149,26 +164,21 @@ void saveDB()
         return;
     }
 
-    Serial.println("done");
-    sqlite3_close(db1);
+    // saveDB();
+
+    // sqlite3_close(db1);
 }
 
 uint32_t pevTime = 0;
 
 void loop()
 {
-    rtc->loop();
-    uint32_t curTime = millis();
-    if (curTime - pevTime >= 1000)
-    {
-        pevTime = curTime;
-        Serial.println("save db.");
-        Serial.print("get dateTime: ");
-        Serial.println(rtc->getDateTimeString());
-        Serial.print("get gettDatestamp: ");
-        Serial.println(rtc->getDateString());
-        Serial.print("get gettTimestamp: ");
-        Serial.println(rtc->getTimeString());
-        // saveDB();
-    }
+    // rtc->loop();
+    // uint32_t curTime = millis();
+    // if (curTime - pevTime >= 5000)
+    // {
+    //     pevTime = curTime;
+    //     saveDB();
+    //     Serial.println("save db.");
+    // }
 }
