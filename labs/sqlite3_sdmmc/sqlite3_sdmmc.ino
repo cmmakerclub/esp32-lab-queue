@@ -206,7 +206,7 @@ void setup()
     Serial.println(" ");
     Serial.println(" ");
 
-    char buffer[100];
+    char buffer[200];
     sprintf(buffer, "INSERT INTO dataman (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
     rc = db_exec(db1, buffer);
     if (rc != SQLITE_OK)
@@ -216,9 +216,13 @@ void setup()
         Serial.println(" ");
         // sqlite3_close(db1);
         // return;
-    } else {
+    }
+    else
+    {
         Serial.print("INSER Done...");
     }
+
+    sprintf(buffer, ""); // clear buffer
 
     // char buffer[100];
     // sprintf(buffer, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
@@ -256,6 +260,26 @@ void setup()
 
 uint32_t pevTime = 0;
 
+void saveDB()
+{
+    int rc;
+    char buffer[200];
+
+    sprintf(buffer, "INSERT INTO dataman (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
+    rc = db_exec(db1, buffer);
+    if (rc != SQLITE_OK)
+    {
+        Serial.print("INSER Failed...");
+        Serial.println(" ");
+        Serial.println(" ");
+    }
+    else
+    {
+        Serial.print("INSER Done...");
+    }
+
+    sprintf(buffer, ""); // clear buffer
+}
 void loop()
 {
     delay(1);
@@ -264,7 +288,7 @@ void loop()
     if (curTime - pevTime >= 5000)
     {
         pevTime = curTime;
-    //     saveDB();
-        Serial.println("loop...");
+        saveDB();
+        Serial.println("save db done...");
     }
 }

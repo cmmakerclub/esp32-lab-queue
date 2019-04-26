@@ -13,8 +13,8 @@ protected:
   RTC_DS1307 *rtc;
   char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
   char dateTimeCharArrray[100];
-  char dateCharArrray[100];
-  char timeCharArrray[100];
+  char dateCharArrray[50];
+  char timeCharArrray[50];
   uint32_t prev;
   bool _ready = false;
   bool _rtc_locked = false;
