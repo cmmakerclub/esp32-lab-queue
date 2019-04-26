@@ -18,6 +18,7 @@ void taskOne( void * parameter ) {
 }
 
 QueueHandle_t queue;
+
 void setup() {
 
   Serial.begin(115200);
@@ -34,7 +35,6 @@ void setup() {
               NULL,             /* Parameter passed as input of the task */
               1,                /* Priority of the task. */
               NULL);            /* Task handle. */
-
 }
 
 void loop() {
