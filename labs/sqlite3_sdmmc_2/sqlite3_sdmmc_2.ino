@@ -61,10 +61,9 @@ int db_exec(sqlite3 *db, const char *sql) {
     else {
         Serial.printf("Operation done successfully\n");
     }
-    Serial.print(F("Time taken:"));
-    Serial.print((micros() - start)/1000);
+
     _executedTime = (micros() - start)/1000;
-    Serial.println("ms");;
+    Serial.printf("Time taken: %lu ms\r\n", _executedTime)
     return rc;
 }
 
@@ -130,11 +129,6 @@ void setup()
       }
     }
 
-
-    // rc = db_exec(db1, data);
-    // rc = db_exec(db1, "INSERT INTO datalog VALUES (" +s_Date.c_str+ "," +s_Time.c_str+ "," +String(id)+ "," +String(value)+ ", 'superman');");
-    // sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(),rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    // Serial.println(buffer);
 
     id++;
     value = random(0, 100);
