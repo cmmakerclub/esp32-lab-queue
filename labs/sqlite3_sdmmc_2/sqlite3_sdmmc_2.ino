@@ -18,12 +18,14 @@ CMMC_RTC *rtc;
 String s_Date = " ";
 String s_Time = " ";
 String s_Name = " ";
+
 int id = 0;
 int value = 0;
 int rc;
-sqlite3 *db1;
-char *zErrMsg = 0;
+uint32_t _executedTime = 0;
 
+sqlite3 *db1;
+static char *zErrMsg = 0;
 const char *data = "Callback function called";
 static int callback(void *data, int argc, char **argv, char **azColName) {
     int i;
@@ -43,7 +45,7 @@ int openDb(const char *filename, sqlite3 **db) {
         ESP.deepSleep(1e6);
     }
     else {
-        Serial.printf("Opened database successfully\n");
+        Serial.printf("Opened database successfully, status=%d\n", rc);
     }
     return rc;
 }
@@ -60,7 +62,9 @@ int db_exec(sqlite3 *db, const char *sql) {
         Serial.printf("Operation done successfully\n");
     }
     Serial.print(F("Time taken:"));
-    Serial.println(micros() - start);
+    Serial.print((micros() - start)/1000);
+    _executedTime = (micros() - start)/1000;
+    Serial.println("ms");;
     return rc;
 }
 
@@ -80,12 +84,7 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(2, INPUT_PULLUP);
-    // char *zErrMsg = 0;
-
-    // SPI.begin();
     SD_MMC.begin("/sdcard", true);
-    delay(50);
-
     uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Serial.println("No SD_MMC card attached");
@@ -113,31 +112,27 @@ void setup()
     // rtc = new CMMC_RTC();
     // rtc->setup();
     // rtc->loop();
-    //
-    // Serial.print("get dateTime: ");
-    // Serial.println(rtc->getDateTimeString());
-    // Serial.print("get gettDatestamp: ");
-    // Serial.println(rtc->getDateString());
-    // Serial.print("get gettTimestamp: ");
-    // Serial.println(rtc->getTimeString());
+    deleteFile(SD_MMC, "/ina219.db");
 
-    // deleteFile(SD_MMC, "/ina219.db");
 
-    // Open database 1
-    if (openDb("/sdcard/ina219.db", &db1))
-        return;
+    if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
+      rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, value INTEGER, IDname content, ms INTEGER);");
+      if (rc != SQLITE_OK)  {
+          sqlite3_close(db1);
+          return;
+      }
 
-    rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (date TEXT, time TEXT, id INTEGER, value INTEGER, IDname content);");
-    // if (rc != SQLITE_OK)
-    // {
-    //     // sqlite3_close(db1);
-    //     // return;
-    // }
+      static char buffer[100];
+      sprintf(buffer, "INSERT INTO datalog(time, ms) VALUES(%lu, %lu);", _executedTime, millis());
+      rc = db_exec(db1, buffer);
+      if (rc == SQLITE_OK) {
+        Serial.println("INSERTED.");
+      }
+    }
 
-    // const char *data = "INSERT INTO test1 VALUES (1, 'Hello, World from test1');";
+
     // rc = db_exec(db1, data);
     // rc = db_exec(db1, "INSERT INTO datalog VALUES (" +s_Date.c_str+ "," +s_Time.c_str+ "," +String(id)+ "," +String(value)+ ", 'superman');");
-    // char buffer[100];
     // sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(),rtc->getTimeString().c_str(), id, value, s_Name.c_str());
     // Serial.println(buffer);
 
@@ -149,12 +144,11 @@ void setup()
 
 void loop()
 {
-    // rtc->loop();
-    // uint32_t curTime = millis();
-    // if (curTime - pevTime >= 5000)
-    // {
-    //     pevTime = curTime;
-    //     saveDB();
-    //     Serial.println("save db.");
-    // }
+    static char buffer[100];
+    sprintf(buffer, "INSERT INTO datalog(time, ms) VALUES(%lu, %lu);", _executedTime, millis());
+    rc = db_exec(db1, buffer);
+    if (rc == SQLITE_OK) {
+      // Serial.println("INSERTED.");
+    }
+    // delay(100);
 }
