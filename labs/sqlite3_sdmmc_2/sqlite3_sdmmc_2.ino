@@ -16,14 +16,10 @@
 #include <functional>
 // typedef std::function<int (void*, int, char**, char**)> sqlite_cb_t;
 typedef int(*sqlite_cb_t)(void*, int, char**, char**);
-
 CMMC_RTC *rtc;
 
-int id = 0;
-int value = 0;
 int rc;
 uint32_t _executedTime = 0;
-
 sqlite3 *db1;
 static char *zErrMsg = 0;
 const char *data = "Callback function called";
@@ -125,11 +121,6 @@ void setup()
         Serial.println("INSERTED.");
       }
     }
-
-
-    id++;
-    // value = random(0, 100);
-    // s_Name = "ID001";
 }
 
 uint32_t currentRowId = 0;
