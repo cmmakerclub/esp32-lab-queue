@@ -15,10 +15,6 @@
 
 CMMC_RTC *rtc;
 
-String s_Date = " ";
-String s_Time = " ";
-String s_Name = " ";
-
 int id = 0;
 int value = 0;
 int rc;
@@ -110,11 +106,7 @@ void setup()
     SD_MMC.begin("/sdcard", true);
     printCardInfo();
     sqlite3_initialize();
-    // rtc = new CMMC_RTC();
-    // rtc->setup();
-    // rtc->loop();
     deleteFile(SD_MMC, "/ina219.db");
-
 
     if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
       rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
