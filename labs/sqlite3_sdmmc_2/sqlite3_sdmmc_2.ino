@@ -46,7 +46,6 @@ int openDb(const char *filename, sqlite3 **db) {
   return rc;
 }
 
-
 int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
 {
   Serial.println(sql);
@@ -65,12 +64,10 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
 
 void deleteFile(fs::FS &fs, const char *path) {
   Serial.printf("Deleting file: %s\n", path);
-  if (fs.remove(path))
-  {
+  if (fs.remove(path)) {
     Serial.println("File deleted");
   }
-  else
-  {
+  else {
     Serial.println("Delete failed");
   }
 }
@@ -99,8 +96,7 @@ void printCardInfo() {
   Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
 }
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
   pinMode(2, INPUT_PULLUP);
   SD_MMC.begin("/sdcard", true);
@@ -126,8 +122,7 @@ int xcallback(void *data, int argc, char **argv, char **azColName) {
   return 0;
 }
 
-void loop()
-{
+void loop() {
   static char buffer[100];
   sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
 
