@@ -13,6 +13,10 @@
 #include "SD_MMC.h"
 #include <CMMC_RTC.h>
 
+#include <functional>
+// typedef std::function<int (void*, int, char**, char**)> sqlite_cb_t;
+typedef int(*sqlite_cb_t)(void*, int, char**, char**);
+
 CMMC_RTC *rtc;
 
 int id = 0;
@@ -46,18 +50,18 @@ int openDb(const char *filename, sqlite3 **db) {
     return rc;
 }
 
-int db_exec(sqlite3 *db, const char *sql) {
+
+int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
+{
     Serial.println(sql);
     long start = micros();
-    int rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
-    if (rc != SQLITE_OK) {
-        Serial.printf("SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
+    int rc = SQLITE_ERROR;
+    if (cb == NULL) {
+      rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
     }
     else {
-        Serial.printf("Operation done successfully. ");
+      rc = sqlite3_exec(db, sql, cb, (void *)data, &zErrMsg);
     }
-
     _executedTime = (micros() - start)/1000;
     Serial.printf("Time taken: %lu ms\r\n", _executedTime);
     return rc;
@@ -106,8 +110,7 @@ void setup()
     SD_MMC.begin("/sdcard", true);
     printCardInfo();
     sqlite3_initialize();
-    deleteFile(SD_MMC, "/ina219.db");
-
+    // deleteFile(SD_MMC, "/ina219.db");
     if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
       rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
       if (rc != SQLITE_OK)  {
@@ -125,10 +128,19 @@ void setup()
 
 
     id++;
-    value = random(0, 100);
-    s_Name = "ID001";
+    // value = random(0, 100);
+    // s_Name = "ID001";
 }
 
+    int xcallback(void *data, int argc, char **argv, char **azColName) {
+        int i;
+        Serial.printf("[x]%s: ", (const char *)data);
+        for (i = 0; i < argc; i++) {
+            Serial.printf("[y]%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+        }
+        Serial.printf("\n");
+        return 0;
+    }
 
 void loop()
 {
@@ -136,7 +148,19 @@ void loop()
     sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
     rc = db_exec(db1, buffer);
     if (rc == SQLITE_OK) {
-      // Serial.println("INSERTED.");
+    Serial.println("INSERTED.");
     }
-    // delay(100);
+
+    sprintf(buffer, "SELECT id,heap,ms FROM datalog ORDER BY id DESC LIMIT 1;");
+    rc = db_exec(db1, buffer, xcallback);
+    if (rc == SQLITE_OK) {
+      Serial.println("QUERY OK.");
+    }
+    delay(500);
+
+    // sprintf(buffer, "SELECT * FROM datalog ORDER BY id DESC LIMIT 1;");
+    // rc = db_exec(db1, buffer);
+    // if (rc == SQLITE_OK) {
+    //   Serial.println("QUERY OK.");
+    // }
 }
