@@ -1,22 +1,13 @@
-/*
-    This example opens Sqlite3 databases from SD Card and
-    retrieves data from them.
-    Before running please copy following files to SD Card:
-    data/mdr512.db
-    data/census2000names.db
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <sqlite3.h>
 #include <SPI.h>
 #include <FS.h>
-#include "SD_MMC.h"
-#include <CMMC_RTC.h>
+#include <SD_MMC.h>
 
 #include <functional>
 // typedef std::function<int (void*, int, char**, char**)> sqlite_cb_t;
 typedef int(*sqlite_cb_t)(void*, int, char**, char**);
-CMMC_RTC *rtc;
 
 int rc;
 uint32_t _executedTime = 0;
@@ -62,16 +53,6 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
   return rc;
 }
 
-void deleteFile(fs::FS &fs, const char *path) {
-  Serial.printf("Deleting file: %s\n", path);
-  if (fs.remove(path)) {
-    Serial.println("File deleted");
-  }
-  else {
-    Serial.println("Delete failed");
-  }
-}
-
 void printCardInfo() {
   uint8_t cardType = SD_MMC.cardType();
   if (cardType == CARD_NONE) {
@@ -99,8 +80,8 @@ void printCardInfo() {
 void setup() {
   Serial.begin(115200);
   pinMode(2, INPUT_PULLUP);
+
   SD_MMC.begin("/sdcard", true);
-  // deleteFile(SD_MMC, "/ina219.db");
 
   printCardInfo();
   sqlite3_initialize();
@@ -116,14 +97,13 @@ void setup() {
 
 uint32_t currentRowId = 0;
 int xcallback(void *data, int argc, char **argv, char **azColName) {
-  int i;
   currentRowId = strtoul(argv[0] ? argv[0] : "0", NULL, 10);
   Serial.printf("currentRowId = %lu\r\n", currentRowId);
   return 0;
 }
 
+static char buffer[100];
 void loop() {
-  static char buffer[100];
   sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
 
   if (db_exec(db1, buffer) == SQLITE_OK) {
