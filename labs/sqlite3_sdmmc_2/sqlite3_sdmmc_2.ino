@@ -29,7 +29,7 @@ static char *zErrMsg = 0;
 const char *data = "Callback function called";
 static int callback(void *data, int argc, char **argv, char **azColName) {
     int i;
-    Serial.printf("%s: ", (const char *)data);
+    Serial.printf("%s: \r\n", (const char *)data);
     for (i = 0; i < argc; i++)
     {
         Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
@@ -132,32 +132,39 @@ void setup()
     // s_Name = "ID001";
 }
 
-    int xcallback(void *data, int argc, char **argv, char **azColName) {
-        int i;
-        Serial.printf("[x]%s: ", (const char *)data);
-        for (i = 0; i < argc; i++) {
-            Serial.printf("[y]%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        }
-        Serial.printf("\n");
-        return 0;
-    }
+uint32_t currentRowId = 0;
+int xcallback(void *data, int argc, char **argv, char **azColName) {
+    int i;
+    // Serial.printf("[x.]%s: \r\n", (const char *)data);
+    currentRowId = strtoul(argv[0] ? argv[0]: "0", NULL, 10);
+    // for (i = 0; i < argc; i++) {
+    //     Serial.printf("[y.]%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    // }
+    // Serial.printf("\n");
+    Serial.printf("currentRowId = %lu\r\n", currentRowId);
+    return 0;
+}
 
 void loop()
 {
     static char buffer[100];
-    sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
-    rc = db_exec(db1, buffer);
-    if (rc == SQLITE_OK) {
-    Serial.println("INSERTED.");
-    }
+    // sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
+    // rc = db_exec(db1, buffer);
+    // if (rc == SQLITE_OK) {
+    //   Serial.println("INSERTED.");
+    // }
 
     sprintf(buffer, "SELECT id,heap,ms FROM datalog ORDER BY id DESC LIMIT 1;");
     rc = db_exec(db1, buffer, xcallback);
     if (rc == SQLITE_OK) {
       Serial.println("QUERY OK.");
     }
-    delay(500);
 
+    sprintf(buffer, "DELETE FROM datalog WHERE id = %lu;", currentRowId);
+    rc = db_exec(db1, buffer);
+    if (rc == SQLITE_OK) {
+      Serial.println("DELETE OK.");
+    }
     // sprintf(buffer, "SELECT * FROM datalog ORDER BY id DESC LIMIT 1;");
     // rc = db_exec(db1, buffer);
     // if (rc == SQLITE_OK) {
