@@ -104,21 +104,16 @@ void setup()
     Serial.begin(115200);
     pinMode(2, INPUT_PULLUP);
     SD_MMC.begin("/sdcard", true);
+    // deleteFile(SD_MMC, "/ina219.db");
+
     printCardInfo();
     sqlite3_initialize();
-    // deleteFile(SD_MMC, "/ina219.db");
+
     if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
       rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
       if (rc != SQLITE_OK)  {
           sqlite3_close(db1);
           return;
-      }
-
-      static char buffer[100];
-      sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
-      rc = db_exec(db1, buffer);
-      if (rc == SQLITE_OK) {
-        Serial.println("INSERTED.");
       }
     }
 }
