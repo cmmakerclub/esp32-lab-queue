@@ -59,11 +59,11 @@ int db_exec(sqlite3 *db, const char *sql) {
         sqlite3_free(zErrMsg);
     }
     else {
-        Serial.printf("Operation done successfully\n");
+        Serial.printf("Operation done successfully. ");
     }
 
     _executedTime = (micros() - start)/1000;
-    Serial.printf("Time taken: %lu ms\r\n", _executedTime)
+    Serial.printf("Time taken: %lu ms\r\n", _executedTime);
     return rc;
 }
 
@@ -79,11 +79,7 @@ void deleteFile(fs::FS &fs, const char *path) {
     }
 }
 
-void setup()
-{
-    Serial.begin(115200);
-    pinMode(2, INPUT_PULLUP);
-    SD_MMC.begin("/sdcard", true);
+void printCardInfo() {
     uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Serial.println("No SD_MMC card attached");
@@ -105,9 +101,15 @@ void setup()
     }
     uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
     Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
+}
 
+void setup()
+{
+    Serial.begin(115200);
+    pinMode(2, INPUT_PULLUP);
+    SD_MMC.begin("/sdcard", true);
+    printCardInfo();
     sqlite3_initialize();
-
     // rtc = new CMMC_RTC();
     // rtc->setup();
     // rtc->loop();
@@ -115,14 +117,14 @@ void setup()
 
 
     if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
-      rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, value INTEGER, IDname content, ms INTEGER);");
+      rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
       if (rc != SQLITE_OK)  {
           sqlite3_close(db1);
           return;
       }
 
       static char buffer[100];
-      sprintf(buffer, "INSERT INTO datalog(time, ms) VALUES(%lu, %lu);", _executedTime, millis());
+      sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
       rc = db_exec(db1, buffer);
       if (rc == SQLITE_OK) {
         Serial.println("INSERTED.");
@@ -139,7 +141,7 @@ void setup()
 void loop()
 {
     static char buffer[100];
-    sprintf(buffer, "INSERT INTO datalog(time, ms) VALUES(%lu, %lu);", _executedTime, millis());
+    sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
     rc = db_exec(db1, buffer);
     if (rc == SQLITE_OK) {
       // Serial.println("INSERTED.");
