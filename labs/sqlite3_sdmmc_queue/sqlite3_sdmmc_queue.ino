@@ -8,7 +8,6 @@
 #include <Arduino.h>
 
 #include <functional>
-// typedef std::function<int (void*, int, char**, char**)> sqlite_cb_t;
 typedef int(*sqlite_cb_t)(void*, int, char**, char**);
 
 #define takeMuxSemaphore() if( mux ) { xSemaphoreTake(mux, portMAX_DELAY); Serial.println("Took Semaphore"); }
@@ -24,8 +23,7 @@ const char *data = "Callback function called";
 static int callback(void *data, int argc, char **argv, char **azColName) {
   int i;
   Serial.printf("%s: \r\n", (const char *)data);
-  for (i = 0; i < argc; i++)
-  {
+  for (i = 0; i < argc; i++) {
     Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
   }
   Serial.printf("\n");
@@ -44,8 +42,7 @@ int openDb(const char *filename, sqlite3 **db) {
   return rc;
 }
 
-int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
-{
+int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL) {
   takeMuxSemaphore();
   Serial.println(sql);
   long start = micros();
@@ -98,15 +95,35 @@ void setupTasks() {
       static char buffer[100];
       // bzero(_buffer, sizeof(_buffer));
       if (xStatus == pdPASS) {
-        Serial.println("incomming data from QUEUE:");
         sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
         if (db_exec(db1, buffer) == SQLITE_OK) {
           Serial.println("INSERT OK.");
         };
       }
-
     }
   }, "receiveTask", 4096, NULL, 1, NULL, 1);
+
+  xTaskCreatePinnedToCore ([](void * parameter) -> void {
+
+    while (1) {
+      vTaskDelay(100);
+      Serial.println("producerTask is producing...");
+      BaseType_t xStatus;
+      for (size_t i = 0; i < 100; i++) {
+        const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+        Data_t data;
+        data.ms = millis();
+        Serial.println("> sendTask2 is sending data");
+        xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
+        if (xStatus == pdPASS) {
+          Serial.printf("Queue =%d sent ok.\r\n", i);
+        }
+        else {
+          Serial.printf("Queue =%d sent failed.\r\n", i);
+        }
+      }
+    }
+  }, "producerTask", 4096, NULL, 1, NULL, 1);
 }
 
 void setup()  {
@@ -146,19 +163,9 @@ static void sqlOperation(void * parameter) {
       Serial.println("QUERY OK.");
     }
 
-    sprintf(buffer, "DELETE FROM datalog WHERE id = %lu;", currentRowId);
-    if (db_exec(db1, buffer) == SQLITE_OK) {
-      Serial.println("DELETE OK.");
-    }
-
-    vTaskDelay(5000);
-    BaseType_t xStatus;
-    for (size_t i = 0; i < 10; i++) {
-      const TickType_t xTicksToWait = pdMS_TO_TICKS(300);
-      Data_t data;
-      data.ms = millis();
-      Serial.println("> sendTask2 is sending data");
-      xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
-    }
+    // sprintf(buffer, "DELETE FROM datalog WHERE id = %lu;", currentRowId);
+    // if (db_exec(db1, buffer) == SQLITE_OK) {
+    //   Serial.println("DELETE OK.");
+    // }
   }
 }
