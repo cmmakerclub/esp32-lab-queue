@@ -12,6 +12,9 @@
 #include <FS.h>
 #include "SD_MMC.h"
 #include <CMMC_RTC.h>
+#include <functional>
+
+typedef std::function<int (void *, int, char**, char**)> sqlite_cb_t;
 
 CMMC_RTC *rtc;
 
@@ -51,12 +54,22 @@ int openDb(const char *filename, sqlite3 **db)
     return rc;
 }
 
+<<<<<<< HEAD
 char *zErrMsg = 0;
 int db_exec(sqlite3 *db, const char *sql)
+=======
+int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
+>>>>>>> 9fb2b6e75480820dc585148368f47f293a1b25e8
 {
     Serial.println(sql);
     long start = micros();
-    int rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
+    int rc;
+    if (cb == NULL) {
+      rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
+    }
+    else {
+      rc = sqlite3_exec(db, sql, cb, (void *)data, &zErrMsg);
+    }
     if (rc != SQLITE_OK)
     {
         Serial.printf("SQL error: %s\n", zErrMsg);
@@ -316,6 +329,7 @@ void saveDB()
 
 void loop()
 {
+<<<<<<< HEAD
     rtc->loop();
     uint32_t curTime = millis();
     if (curTime - pevTime >= 5000)
@@ -325,3 +339,14 @@ void loop()
     }
     delay(1);
 }
+=======
+    // rtc->loop();
+    // uint32_t curTime = millis();
+    // if (curTime - pevTime >= 5000)
+    // {
+    //     pevTime = curTime;
+    //     saveDB();
+    //     Serial.println("save db.");
+    // }
+}
+>>>>>>> 9fb2b6e75480820dc585148368f47f293a1b25e8
