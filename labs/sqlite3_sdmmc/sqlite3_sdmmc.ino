@@ -18,9 +18,11 @@ typedef std::function<int(void *, int, char **, char **)> sqlite_cb_t;
 
 CMMC_RTC *rtc;
 
-String s_Date = " ";
-String s_Time = " ";
-String s_Name = " ";
+String s_Date = "";
+String s_Time = "";
+String s_Name = "";
+String lat = "";
+String lon = "";
 int value = 0;
 
 int rc;
@@ -112,10 +114,11 @@ void setup()
     Serial.begin(115200);
     delay(1);
 
-    pinMode(2, INPUT_PULLUP);
+    rtc = new CMMC_RTC();
+    rtc->setup();
+    rtc->loop();
 
-    // char *zErrMsg = 0;
-    // int rc;
+    pinMode(2, INPUT_PULLUP);
 
     SPI.begin();
     SD_MMC.begin("/sdcard", true);
@@ -152,17 +155,6 @@ void setup()
     Serial.println(" ");
     Serial.println(" ");
 
-    // writeFile(SD_MMC, "/hello.txt", "Hello ");
-
-    rtc = new CMMC_RTC();
-    rtc->setup();
-    rtc->loop();
-
-    // deleteFile(SD_MMC, "/superman.db");
-
-    // Open database 1
-    // if (openDb("/sdcard/census2000names.db", &db1))
-    //     return;
     if (openDb("/sdcard/labSqlite1.db", &db1))
     {
         Serial.print("Failed...");
@@ -170,7 +162,7 @@ void setup()
         return;
     }
 
-    rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS dataman (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, name TEXT, value INTEGER);");
+    rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS dataman (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, name TEXT, value INTEGER, lat TEXT, lon TEXT);");
     if (rc != SQLITE_OK)
     {
         Serial.println("CREATE TABLE Failed...");
@@ -179,100 +171,6 @@ void setup()
     {
         Serial.println("CREATE TABLE Successfully...");
     }
-
-    // rc = db_exec(db1, "INSERT INTO dataman VALUES ('26/04/19', '15.44', 1, 100 , 'superman');");
-    // if (rc != SQLITE_OK)
-    // {
-    //     Serial.print("INSER Failed...");
-    //     Serial.println(" ");
-    //     Serial.println(" ");
-    //     // sqlite3_close(db1);
-    //     // return;
-    // }
-
-    // rc = db_exec(db1, "INSERT INTO dataman VALUES ('26/04/19', '15.44', 2, 50 , 'superman');");
-    // if (rc != SQLITE_OK)
-    // {
-    //     Serial.print("INSER Failed...");
-    //     Serial.println(" ");
-    //     Serial.println(" ");
-    //     // sqlite3_close(db1);
-    //     // return;
-    // }
-
-    // const char *data = "INSERT INTO test1 VALUES (1, 'Hello, World from test1');";
-    // rc = db_exec(db1, data);
-    // rc = db_exec(db1, "INSERT INTO datalog VALUES (" +s_Date.c_str+ "," +s_Time.c_str+ "," +String(id)+ "," +String(value)+ ", 'superman');");
-    // char buffer[100];
-    // sprintf(buffer, "INSERT INTO datalog VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(),rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    // Serial.println(buffer);
-
-    // s_Date = rtc->getDateString();
-    // s_Time = rtc->getTimeString();
-    // id = 0;
-    // value = random(0, 100);
-    // s_Name = "ID001";
-
-    // Serial.print("get: ");
-    // Serial.print(rtc->getDateString());
-    // Serial.print(" || ");
-    // Serial.println(s_Date);
-
-    // Serial.print("get: ");
-    // Serial.print(rtc->getTimeString());
-    // Serial.print(" || ");
-    // Serial.print(s_Time);
-    // Serial.println(" ");
-    // Serial.println(" ");
-
-    // char buffer[200];
-    // sprintf(buffer, "INSERT INTO dataman (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    // rc = db_exec(db1, buffer);
-    // if (rc != SQLITE_OK)
-    // {
-    //     Serial.print("INSER Failed...");
-    //     Serial.println(" ");
-    //     Serial.println(" ");
-    // }
-    // else
-    // {
-    //     Serial.println("INSER Done...");
-    // }
-
-    // sprintf(buffer, ""); // clear buffer
-    // sqlite3_close(db1);
-
-    // char buffer[100];
-    // sprintf(buffer, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    // // sprintf(buffer, "INSERT INTO datalog (date, time, id, value, IDname) VALUES ('%s', '%s', %d, %d, '%s');", rtc->getDateString().c_str(), rtc->getTimeString().c_str(), id, value, s_Name.c_str());
-    // // Serial.println(buffer);
-    // Serial.println("Create Buffer...");
-    // Serial.println(" ");
-    // Serial.println(" ");
-
-    // if (openDb("/sdcard/ina219.db", &db1))
-    // {
-    //     Serial.println("Open: ");
-    // }
-
-    // rc = db_exec(db1, buffer);
-    // if (rc != SQLITE_OK)
-    // {
-    //     Serial.print("Save Failed...");
-    //     rc = db_exec(db1, buffer);
-    // }
-    // else
-    // {
-    //     Serial.print("Save OK...");
-    //     sqlite3_close(db1);
-    // }
-
-    // rc = db_exec(db1, "Select * from datalog");
-    // if (rc != SQLITE_OK)
-    // {
-    //     sqlite3_close(db1);
-    // }
-
     Serial.println("Done process...");
 }
 
@@ -287,7 +185,6 @@ void saveDB()
     s_Name = "ID001";
     value = random(0, 100);
 
-    // rc = db_exec(db1, "INSERT INTO dataman VALUES ('26/04/19', '15.44', 2, 50 , 'superman');");
     sprintf(buffer, "INSERT INTO dataman(date, time, name, value) VALUES ('%s', '%s', '%s', %d);", s_Date.c_str(), s_Time.c_str(), s_Name.c_str(), value);
     rc = db_exec(db1, buffer);
     if (rc != SQLITE_OK)
