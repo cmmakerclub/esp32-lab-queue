@@ -60,7 +60,7 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL) {
 }
 
 
-static void sqlOperation(void * parameter);
+static void NB_IoTTask(void * parameter);
 
 static xQueueHandle xQueue;
 // , "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
@@ -81,7 +81,7 @@ void setupQueue() {
   }
 }
 void setupTasks() {
-  xTaskCreatePinnedToCore(sqlOperation, "sqlOperation", 4096, NULL, 4, NULL, 0);
+  xTaskCreatePinnedToCore(NB_IoTTask, "NB_IoTTask", 4096, NULL, 4, NULL, 0);
   static int a;
   a = 4;
   xTaskCreatePinnedToCore ([](void * parameter) -> void {
@@ -91,7 +91,7 @@ void setupTasks() {
     Serial.println("Task Recv is Running..");
     for (;;) {
       if (xQueue == NULL) continue;
-      xStatus = xQueueReceive( xQueue, &data, xTicksToWait );
+      xStatus = xQueueReceive( xQueue, &data, xTicksToWait);
       static char buffer[100];
       // bzero(_buffer, sizeof(_buffer));
       if (xStatus == pdPASS) {
@@ -101,29 +101,13 @@ void setupTasks() {
         };
       }
     }
-  }, "receiveTask", 4096, NULL, 1, NULL, 1);
+  }, "insertDBTask", 4096, NULL, 1, NULL, 1);
 
-  xTaskCreatePinnedToCore ([](void * parameter) -> void {
-
-    while (1) {
-      vTaskDelay(100);
-      Serial.println("producerTask is producing...");
-      BaseType_t xStatus;
-      for (size_t i = 0; i < 100; i++) {
-        const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-        Data_t data;
-        data.ms = millis();
-        Serial.println("> sendTask2 is sending data");
-        xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
-        if (xStatus == pdPASS) {
-          Serial.printf("Queue =%d sent ok.\r\n", i);
-        }
-        else {
-          Serial.printf("Queue =%d sent failed.\r\n", i);
-        }
-      }
-    }
-  }, "producerTask", 4096, NULL, 1, NULL, 1);
+  // xTaskCreatePinnedToCore ([](void * parameter) -> void {
+  //   while (1) {
+  //
+  //   }
+  // }, "producerTask", 4096, NULL, 1, NULL, 1);
 }
 
 void setup()  {
@@ -151,21 +135,36 @@ int xcallback(void *data, int argc, char **argv, char **azColName) {
 }
 
 void loop() {
-  taskYIELD();
+    taskYIELD();
+    vTaskDelay(2000);
+    Serial.println("producerTask is producing...");
+    BaseType_t xStatus;
+    for (size_t i = 0; i < 100; i++) {
+      const TickType_t xTicksToWait = pdMS_TO_TICKS(30);
+      Data_t data;
+      data.ms = millis();
+      Serial.println("> sendTask2 is sending data");
+      xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
+      if (xStatus == pdPASS) {
+        Serial.printf("Queue =%d sent ok.\r\n", i);
+      }
+      else {
+        Serial.printf("Queue =%d sent failed.\r\n", i);
+      }
+    }
 }
 
-
 static char buffer[100];
-static void sqlOperation(void * parameter) {
+static void NB_IoTTask(void * parameter) {
   while (1) {
     sprintf(buffer, "SELECT id,heap,ms FROM datalog ORDER BY id DESC LIMIT 1;");
     if (db_exec(db1, buffer, xcallback) == SQLITE_OK) {
       Serial.println("QUERY OK.");
     }
-
-    // sprintf(buffer, "DELETE FROM datalog WHERE id = %lu;", currentRowId);
-    // if (db_exec(db1, buffer) == SQLITE_OK) {
-    //   Serial.println("DELETE OK.");
-    // }
+    sprintf(buffer, "DELETE FROM datalog WHERE id = %lu;", currentRowId);
+    if (db_exec(db1, buffer) == SQLITE_OK) {
+      Serial.println("DELETE OK.");
+    }
+    // vTaskDelay(100);
   }
 }
