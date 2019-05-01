@@ -13,8 +13,8 @@ typedef int(*sqlite_cb_t)(void*, int, char**, char**);
 
 #define takeMuxSemaphore() if( mux ) { xSemaphoreTake(mux, portMAX_DELAY); Serial.println("Took Semaphore"); }
 #define giveMuxSemaphore() if( mux ) { xSemaphoreGive(mux); Serial.println("Gave Semaphore"); }
-static xSemaphoreHandle mux = NULL; // this is needed to prevent rendering collisions
-                                    // between scrollpanel and heap graph
+
+static xSemaphoreHandle mux = NULL;
 
 int rc;
 uint32_t _executedTime = 0;
@@ -67,7 +67,7 @@ static void sqlOperation(void * parameter);
 
 static xQueueHandle xQueue;
 // , "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
-typedef struct{
+typedef struct {
   uint32_t id;
   String dateString;
   String timeString;
@@ -77,11 +77,11 @@ typedef struct{
 } Data_t;
 
 void setupQueue() {
-    xQueue = xQueueCreate(20, sizeof(Data_t));
-    mux = xSemaphoreCreateMutex();
-    if(xQueue != NULL) {
-        printf("Queue is created\n");
-    }
+  xQueue = xQueueCreate(20, sizeof(Data_t));
+  mux = xSemaphoreCreateMutex();
+  if (xQueue != NULL) {
+    printf("Queue is created\n");
+  }
 }
 void setupTasks() {
   xTaskCreatePinnedToCore(sqlOperation, "sqlOperation", 4096, NULL, 4, NULL, 0);
