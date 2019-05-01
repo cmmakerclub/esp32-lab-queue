@@ -1,4 +1,3 @@
-
  struct AMessage
  {
     char ucMessageID;
