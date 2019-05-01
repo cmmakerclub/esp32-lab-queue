@@ -19,6 +19,7 @@ int rc;
 uint32_t _executedTime = 0;
 sqlite3 *db1;
 static char *zErrMsg = 0;
+
 const char *data = "Callback function called";
 static int callback(void *data, int argc, char **argv, char **azColName)
 {
@@ -151,6 +152,7 @@ void setup()
 {
   Serial.begin(115200);
   pinMode(2, INPUT_PULLUP);
+
   setupQueue();
   setupTasks();
 
