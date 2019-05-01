@@ -11,6 +11,11 @@
 // typedef std::function<int (void*, int, char**, char**)> sqlite_cb_t;
 typedef int(*sqlite_cb_t)(void*, int, char**, char**);
 
+#define takeMuxSemaphore() if( mux ) { xSemaphoreTake(mux, portMAX_DELAY); Serial.println("Took Semaphore"); }
+#define giveMuxSemaphore() if( mux ) { xSemaphoreGive(mux); Serial.println("Gave Semaphore"); }
+static xSemaphoreHandle mux = NULL; // this is needed to prevent rendering collisions
+                                    // between scrollpanel and heap graph
+
 int rc;
 uint32_t _executedTime = 0;
 sqlite3 *db1;
@@ -41,6 +46,7 @@ int openDb(const char *filename, sqlite3 **db) {
 
 int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
 {
+  takeMuxSemaphore();
   Serial.println(sql);
   long start = micros();
   int rc = SQLITE_ERROR;
@@ -52,6 +58,7 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
   }
   _executedTime = (micros() - start) / 1000;
   Serial.printf("Time taken: %lu ms\r\n", _executedTime);
+  giveMuxSemaphore();
   return rc;
 }
 
@@ -59,38 +66,22 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
 static void sqlOperation(void * parameter);
 
 static xQueueHandle xQueue;
+// , "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
 typedef struct{
-  float  batt = 0;
-  float  batt_raw = 0;
-  float  batt_percent = 0;
-  float pm10;
-  float pm2_5;
-  int analogValue;
-  uint32_t uptime_s;
-  uint32_t unixtime;
-  uint32_t rebootCount = 0;
-  char latlngC[80];
-  // DateTime dt;
-  unsigned int ct = 1;
-  int packet_type;
-} Data;
+  uint32_t id;
+  String dateString;
+  String timeString;
+  uint32_t heap;
+  uint32_t ms;
+  String IDString;
+} Data_t;
 
 void setupQueue() {
-    xQueue = xQueueCreate(20, sizeof(Data));
+    xQueue = xQueueCreate(20, sizeof(Data_t));
+    mux = xSemaphoreCreateMutex();
     if(xQueue != NULL) {
         printf("Queue is created\n");
     }
-
-    // BaseType_t xStatus;
-    // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-    // Data data;
-    // for (;;) {
-    //   /* receive data from the queue */
-    //   // if (!that->isNbConnected) {
-    //   //   continue;
-    //   // }
-    //   xStatus = xQueueReceive( that->xQueue, &data, xTicksToWait );
-    // }
 }
 void setupTasks() {
   xTaskCreatePinnedToCore(sqlOperation, "sqlOperation", 4096, NULL, 4, NULL, 0);
@@ -99,7 +90,7 @@ void setupTasks() {
   xTaskCreatePinnedToCore ([](void * parameter) -> void {
     BaseType_t xStatus;
     const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-    Data data;
+    Data_t data;
     Serial.println("Task Recv is Running..");
     for (;;) {
       if (xQueue == NULL) continue;
@@ -164,17 +155,10 @@ static void sqlOperation(void * parameter) {
     BaseType_t xStatus;
     for (size_t i = 0; i < 10; i++) {
       const TickType_t xTicksToWait = pdMS_TO_TICKS(300);
-      Data data;
-      // data.packet_type = TYPE_KEEP_ALIVE;
-      // data.ct = that->nbSentCounter++;
-      // data.pm10 = dustSensor->getPMValue(DustPM10);
-      // data.pm2_5 = dustSensor->getPMValue(DustPM2_5);
-      data.uptime_s = millis() / 1000;
-      // data.unixtime = rtc->getCurrentTimestamp();
-      // strcpy(data.latlngC, gps->getLocation().c_str());
+      Data_t data;
+      data.ms = millis();
       Serial.println("> sendTask2 is sending data");
       xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
-
     }
   }
 }
