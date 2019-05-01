@@ -55,30 +55,77 @@ int db_exec(sqlite3 *db, const char *sql, sqlite_cb_t cb = NULL)
   return rc;
 }
 
-static void heapGraph(void * parameter);
 
-void setup() {
-  Serial.begin(115200);
-  pinMode(2, INPUT_PULLUP);
-  // xTaskCreatePinnedToCore(clockSync, "clockSync", 2048, NULL, 4, NULL, 1); // RTC wants to run on core 1 or it fails
-  // vTaskDelete(NULL);
-  xTaskCreatePinnedToCore(heapGraph, "HeapGraph", 4096, NULL, 4, NULL, 0); /* last = Task Core */
+static void sqlOperation(void * parameter);
 
-  xTaskCreatePinnedToCore ([&](void * parameter) -> void {
-    BaseType_t xStatus;
-    // /* time to block the task until data is available */
-    const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-    Serial.println("Task Recv is Running..");
+static xQueueHandle xQueue;
+typedef struct{
+  float  batt = 0;
+  float  batt_raw = 0;
+  float  batt_percent = 0;
+  float pm10;
+  float pm2_5;
+  int analogValue;
+  uint32_t uptime_s;
+  uint32_t unixtime;
+  uint32_t rebootCount = 0;
+  char latlngC[80];
+  // DateTime dt;
+  unsigned int ct = 1;
+  int packet_type;
+} Data;
+
+void setupQueue() {
+    xQueue = xQueueCreate(20, sizeof(Data));
+    if(xQueue != NULL) {
+        printf("Queue is created\n");
+    }
+
+    // BaseType_t xStatus;
+    // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
     // Data data;
-    while(1) {
-     Serial.printf("[%lu] HELLO..\r\n", millis());
-     vTaskDelay( 100 );
+    // for (;;) {
+    //   /* receive data from the queue */
+    //   // if (!that->isNbConnected) {
+    //   //   continue;
+    //   // }
+    //   xStatus = xQueueReceive( that->xQueue, &data, xTicksToWait );
+    // }
+}
+void setupTasks() {
+  xTaskCreatePinnedToCore(sqlOperation, "sqlOperation", 4096, NULL, 4, NULL, 0);
+  static int a;
+  a = 4;
+  xTaskCreatePinnedToCore ([](void * parameter) -> void {
+    BaseType_t xStatus;
+    const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+    Data data;
+    Serial.println("Task Recv is Running..");
+    for (;;) {
+      if (xQueue == NULL) continue;
+      xStatus = xQueueReceive( xQueue, &data, xTicksToWait );
+      static char buffer[100];
+      // bzero(_buffer, sizeof(_buffer));
+      if (xStatus == pdPASS) {
+        Serial.println("incomming data from QUEUE:");
+        sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
+        if (db_exec(db1, buffer) == SQLITE_OK) {
+          Serial.println("INSERT OK.");
+        };
+      }
+
     }
   }, "receiveTask", 4096, NULL, 1, NULL, 1);
+}
+
+void setup()  {
+  Serial.begin(115200);
+  pinMode(2, INPUT_PULLUP);
+  setupQueue();
+  setupTasks();
 
   SD_MMC.begin("/sdcard", true);
   sqlite3_initialize();
-
   if (openDb("/sdcard/ina219.db", &db1) == SQLITE_OK) {
     rc = db_exec(db1, "CREATE TABLE IF NOT EXISTS datalog (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, heap INTEGER, IDname content, ms INTEGER);");
     if (rc != SQLITE_OK)  {
@@ -101,13 +148,8 @@ void loop() {
 
 
 static char buffer[100];
-static void heapGraph(void * parameter) {
+static void sqlOperation(void * parameter) {
   while (1) {
-    sprintf(buffer, "INSERT INTO datalog(time, ms, heap) VALUES(%lu, %lu, %lu);", _executedTime, millis(), ESP.getHeapSize());
-    if (db_exec(db1, buffer) == SQLITE_OK) {
-      Serial.println("INSERT OK.");
-    };
-
     sprintf(buffer, "SELECT id,heap,ms FROM datalog ORDER BY id DESC LIMIT 1;");
     if (db_exec(db1, buffer, xcallback) == SQLITE_OK) {
       Serial.println("QUERY OK.");
@@ -118,6 +160,21 @@ static void heapGraph(void * parameter) {
       Serial.println("DELETE OK.");
     }
 
-    vTaskDelay(500);
+    vTaskDelay(5000);
+    BaseType_t xStatus;
+    for (size_t i = 0; i < 10; i++) {
+      const TickType_t xTicksToWait = pdMS_TO_TICKS(300);
+      Data data;
+      // data.packet_type = TYPE_KEEP_ALIVE;
+      // data.ct = that->nbSentCounter++;
+      // data.pm10 = dustSensor->getPMValue(DustPM10);
+      // data.pm2_5 = dustSensor->getPMValue(DustPM2_5);
+      data.uptime_s = millis() / 1000;
+      // data.unixtime = rtc->getCurrentTimestamp();
+      // strcpy(data.latlngC, gps->getLocation().c_str());
+      Serial.println("> sendTask2 is sending data");
+      xStatus = xQueueSendToFront(xQueue, &data, xTicksToWait);
+
+    }
   }
 }

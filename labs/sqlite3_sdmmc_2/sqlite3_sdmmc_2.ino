@@ -77,6 +77,7 @@ void printCardInfo() {
   Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
 }
 
+
 void setup() {
   Serial.begin(115200);
   pinMode(2, INPUT_PULLUP);
